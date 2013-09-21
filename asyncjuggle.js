@@ -1,41 +1,31 @@
 var http = require('http');
-var urls = process.argv.slice(2);
+var bl = require('bl');
+var results = [];
+var count = 0;
 
-
-function fetchThese(urls, callback) {
-    var count = 0,
-        results = [];
-
-    urls.forEach(function (url) {
-        http.request(url, function (response) {
-            var index = count;
-            count++;
-
-            var str = '';
-
-            //another chunk of data has been recieved, so append it to `str`
-            response.on('data', function (chunk) {
-                str += chunk;
-            });
-
-            //the whole response has been recieved, so we just print it out here
-            response.on('end', function () {
-                results[index] = str;
-
-                if (index == 2) {
-                    callback(null, results);
-                }
-            });
-        }).end();
-    });
-
+function printResults () {
+    for (var i = 0; i < 3; i++) {
+        console.log(results[i]);
+    }
 }
 
+function httpGet(index) {
+    http.get(process.argv[2 + index], function (request) {
+        request.pipe(bl(function (err, data) {
+            if (err) {
+                return console.error(data);
+            }
 
-fetchThese(urls, function (err, results) {
-    if (err) throw err;
+            results[index] = data.toString();
+            count++;
 
-    results.forEach(function (result) {
-        console.log(result);
+            if (count == 3) {   // yay! we are the last one!
+                printResults();
+            }
+        }));
     });
-});
+}
+
+for (var i = 0; i < 3; i++) {
+    httpGet(i);
+}
